@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HR Attendance System</title>
+<style>
+  :root { color-scheme:light; --bg:#f5f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280; --line:#e5e7eb; --brand:#4f46e5; --green:#16a34a; --amber:#d97706; --red:#dc2626; --shadow:0 8px 24px rgba(31,41,55,.06); --hover:#f8faff; }
+  [data-theme="dark"] { color-scheme:dark; --bg:#111827; --card:#1f2937; --text:#f3f4f6; --muted:#9ca3af; --line:#374151; --brand:#818cf8; --green:#4ade80; --amber:#fbbf24; --red:#f87171; --shadow:0 8px 24px rgba(0,0,0,.18); --hover:#273449; }
+  [data-theme="dark"] .btn.gray { background:#374151; color:var(--text); }
+  [data-theme="dark"] .tag { background:#374151; }
+  [data-theme="dark"] .Present,[data-theme="dark"] .Active,[data-theme="dark"] .Approved { background:#123526; color:#4ade80; }
+  [data-theme="dark"] .Late,[data-theme="dark"] .Pending,[data-theme="dark"] .Half { background:#493714; color:#fbbf24; }
+  [data-theme="dark"] .Resigned,[data-theme="dark"] .Rejected,[data-theme="dark"] .Absent { background:#481f25; color:#f87171; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+  .hidden { display:none !important; }
+  header { background:var(--card); border-bottom:1px solid var(--line); padding:16px 22px 16px 260px; display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:5; }
+  header h1 { font-size:18px; margin:0; color:var(--brand); }
+  nav { position:fixed; left:0; top:0; bottom:0; width:238px; padding:92px 14px 20px; display:flex; flex-direction:column; gap:5px; background:var(--card); border-right:1px solid var(--line); z-index:4; }
+  nav button { display:flex; align-items:center; gap:12px; width:100%; background:none; border:0; padding:11px 14px; border-radius:9px; cursor:pointer; text-align:left; font-size:14px; color:var(--muted); transition:background .18s,color .18s,transform .18s; }
+  nav button:hover { background:var(--hover); color:var(--text); transform:translateX(2px); }
+  nav button.active { background:color-mix(in srgb,var(--brand) 12%,transparent); color:var(--brand); font-weight:650; }
+  .nav-icon { width:20px; text-align:center; font-size:17px; }
+  .right { margin-left:auto; display:flex; align-items:center; gap:14px; font-size:13px; color:var(--muted); }
+  .dot { width:9px; height:9px; border-radius:50%; background:#9ca3af; display:inline-block; margin-right:5px; } .dot.on { background:var(--green); }
+  .user { text-align:right; line-height:1.25; color:var(--text); } .user small { color:var(--muted); }
+  main { max-width:1500px; margin:24px 24px 24px 262px; padding:0 16px; }
+  section { display:none; opacity:0; transform:translateY(5px); } section.active { display:block; animation:sectionIn .22s ease forwards; }
+  @keyframes sectionIn { to { opacity:1; transform:translateY(0); } }
+  .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); margin-bottom:20px; }
+  .grid.wide { grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:20px; box-shadow:var(--shadow); transition:box-shadow .2s,transform .2s; }
+  .grid .card { margin:0; }
+  .stat .n { font-size:28px; font-weight:700; } .stat .l { color:var(--muted); font-size:13px; }
+  h2 { font-size:16px; margin:0 0 12px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th,td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); } th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; }
+  .tablewrap { overflow-x:auto; }
+  tbody tr { transition:background .16s; } tbody tr:hover { background:var(--hover); }
+  input,select { padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:14px; background:var(--card); color:var(--text); font-family:inherit; }
+  .form { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .btn { background:var(--brand); color:#fff; border:0; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:14px; transition:filter .16s,transform .16s; }
+  .btn:hover { filter:brightness(1.08); transform:translateY(-1px); }
+  .btn.green { background:var(--green); } .btn.red { background:var(--red); } .btn.gray { background:#e5e7eb; color:var(--text); }
+  .btn.sm { padding:4px 10px; font-size:12px; } .btn.big { padding:14px 26px; font-size:16px; } .btn:disabled { opacity:.35; cursor:not-allowed; }
+  .tag { padding:2px 9px; border-radius:99px; font-size:12px; background:#e5e7eb; }
+  .Present,.Active,.Approved { background:#dcfce7; color:var(--green); } .Late,.Pending,.Half { background:#fef3c7; color:var(--amber); }
+  .Resigned,.Rejected,.Absent { background:#fee2e2; color:var(--red); } .Leave,.HR { background:#dbeafe; color:#2563eb; }
+  #feed { list-style:none; margin:0; padding:0; max-height:260px; overflow:auto; } #feed li { padding:8px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  #toast { position:fixed; bottom:20px; right:20px; background:#111827; color:#fff; padding:12px 16px; border-radius:10px; display:none; max-width:340px; font-size:14px; z-index:30; }
+  .muted { color:var(--muted); font-size:13px; }
+  .hero { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+  .clock { font-size:38px; font-weight:700; letter-spacing:1px; }
+  /* login */
+  #login { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px; }
+  #login .box { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:32px; width:100%; max-width:380px; box-shadow:var(--shadow); }
+  #login h1 { color:var(--brand); margin:0 0 4px; font-size:22px; } #login input { width:100%; margin-bottom:12px; }
+  #login .btn { width:100%; padding:11px; }
+  .charts { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr); gap:16px; margin-bottom:20px; }
+  .chartbox { height:270px; position:relative; }
+  .identity { display:inline-flex; align-items:center; gap:9px; font-weight:550; }
+  .avatar { width:32px; height:32px; display:inline-grid; place-items:center; border-radius:50%; background:color-mix(in srgb,var(--brand) 14%,transparent); color:var(--brand); font-size:11px; font-weight:700; flex:none; }
+  .dept-badge { display:inline-block; padding:4px 10px; border-radius:99px; font-size:12px; font-weight:600; background:color-mix(in srgb,var(--dept-color) 15%,transparent); color:var(--dept-color); }
+  .skeleton { height:14px; margin:5px 0; border-radius:6px; background:linear-gradient(90deg,var(--line) 25%,var(--hover) 50%,var(--line) 75%); background-size:200% 100%; animation:shimmer 1.25s infinite; }
+  @keyframes shimmer { to { background-position:-200% 0; } }
+  #themeToggle { min-width:36px; padding:7px 9px; }
+  @media(max-width:800px) { header { padding-left:82px; } nav { width:68px; padding:82px 8px 16px; } nav button { justify-content:center; padding:12px 6px; font-size:0; } .nav-icon { font-size:18px; } main { margin-left:76px; } .right { gap:8px; } }
+  @media(max-width:600px) { header { padding:12px 10px 12px 76px; } header h1 { display:none; } main { margin:16px 0 16px 68px; padding:0 10px; } .charts { grid-template-columns:1fr; } .chartbox { height:230px; } .right { font-size:11px; } }
+  /* modal */
+  #modal { position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:flex-start; justify-content:center; padding:40px 16px; overflow:auto; z-index:20; }
+  #modal .card { width:100%; max-width:780px; margin:0; }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login">
+  <div class="box">
+    <h1>HR Attendance</h1>
+    <p class="muted" style="margin:0 0 20px">Sign in to continue</p>
+    <input id="lgEmail" type="email" placeholder="Email" autocomplete="username">
+    <input id="lgPass" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="btn" id="lgBtn">Sign in</button>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+<header>
+  <h1>HR Attendance</h1>
+  <nav id="nav"></nav>
+  <div class="right">
+    <span><span class="dot" id="dot"></span><span id="livetxt">Connecting…</span></span>
+    <div class="user"><div id="uName"></div><small id="uRole"></small></div>
+    <button class="btn gray sm" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">☾</button>
+    <button class="btn gray sm" id="logout">Log out</button>
+  </div>
+</header>
+
+<main>
+  <!-- ===== HR: dashboard ===== -->
+  <section id="dashboard">
+    <div class="grid">
+      <div class="card stat"><div class="n" id="sTotal">–</div><div class="l">Active employees</div></div>
+      <div class="card stat"><div class="n" id="sPresent" style="color:var(--green)">–</div><div class="l">Checked in today</div></div>
+      <div class="card stat"><div class="n" id="sLate" style="color:var(--amber)">–</div><div class="l">Late today</div></div>
+      <div class="card stat"><div class="n" id="sAbsent" style="color:var(--red)">–</div><div class="l">Not checked in</div></div>
+      <div class="card stat"><div class="n" id="sPending" style="color:var(--brand)">–</div><div class="l">Pending leave requests</div></div>
+    </div>
+    <div class="charts">
+      <div class="card"><h2>Attendance by department</h2><div class="chartbox"><canvas id="deptChart"></canvas></div></div>
+      <div class="card"><h2>Today's attendance mix</h2><div class="chartbox"><canvas id="attendanceChart"></canvas></div></div>
+    </div>
+    <div class="grid wide">
+      <div class="card"><h2>Live activity</h2><ul id="feed"><li class="muted">Waiting for activity…</li></ul></div>
+      <div class="card"><h2>Departments</h2><div class="tablewrap"><table><thead><tr><th>Department</th><th>Headcount</th><th>Avg salary</th></tr></thead><tbody id="deptStats"></tbody></table></div></div>
+    </div>
+  </section>
+
+  <!-- ===== HR: employees ===== -->
+  <section id="employees">
+    <div class="card">
+      <h2>Add employee</h2>
+      <div class="form">
+        <input id="eCode" placeholder="Code (EMP013)" size="10">
+        <input id="eName" placeholder="Full name">
+        <input id="eEmail" placeholder="Email">
+        <input id="ePhone" placeholder="Phone (10 digits)" size="14">
+        <select id="eDept"></select>
+        <input id="eDesig" placeholder="Designation">
+        <input id="eSalary" type="number" placeholder="Salary" style="width:110px">
+        <select id="eRole"><option>Employee</option><option>HR</option></select>
+        <input id="ePass" placeholder="Password (blank = Welcome@123)" size="26">
+        <button class="btn" id="addEmp">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="form"><h2 style="margin:0">Employees</h2><input id="search" placeholder="Search name / designation" style="margin-left:auto"><select id="fDept"><option value="">All departments</option></select></div>
+      <div class="tablewrap"><table><thead><tr><th>Code</th><th>Name</th><th>Email</th><th>Department</th><th>Designation</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody id="empBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===== HR: today's attendance ===== -->
+  <section id="attendance">
+    <div class="card"><h2>Today's attendance</h2>
+      <div class="tablewrap"><table><thead><tr><th>Code</th><th>Name</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th></tr></thead><tbody id="todayBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===== HR: leave approvals ===== -->
+  <section id="leaves">
+    <div class="card"><div class="form"><h2 style="margin:0">Leave requests</h2>
+      <select id="lFilter" style="margin-left:auto"><option value="">All</option><option selected>Pending</option><option>Approved</option><option>Rejected</option></select></div>
+      <div class="tablewrap"><table><thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Reason</th><th>Status</th><th></th></tr></thead><tbody id="leaveBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===== HR: reports ===== -->
+  <section id="reports">
+    <div class="card"><h2>Monthly report</h2>
+      <div class="form"><input id="rYear" type="number" style="width:90px"><input id="rMonth" type="number" min="1" max="12" style="width:70px"><button class="btn" id="runMonthly">Run</button></div>
+      <div class="tablewrap"><table><thead><tr><th>Code</th><th>Name</th><th>Present</th><th>Late</th><th>Half days</th><th>On leave</th><th>Total hrs</th><th>Avg hrs</th></tr></thead><tbody id="monthlyBody"></tbody></table></div>
+    </div>
+    <div class="grid wide">
+      <div class="card"><h2>Department-wise (date)</h2><div class="form"><input id="dDate" type="date"><button class="btn" id="runDept">Run</button></div>
+        <table><thead><tr><th>Department</th><th>Present</th><th>Late</th></tr></thead><tbody id="deptBody"></tbody></table></div>
+      <div class="card"><h2>Absentees (date)</h2><div class="form"><input id="abDate" type="date"><button class="btn" id="runAbs">Run</button></div>
+        <table><thead><tr><th>Code</th><th>Name</th><th>Designation</th></tr></thead><tbody id="absBody"></tbody></table></div>
+      <div class="card"><h2>Most frequent late-comers</h2><button class="btn" id="runLate" style="margin-bottom:12px">Load</button>
+        <table><thead><tr><th>Code</th><th>Name</th><th>Late count</th></tr></thead><tbody id="lateBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===== EMPLOYEE: home ===== -->
+  <section id="home">
+    <div class="card hero">
+      <div><div class="muted" id="hDate"></div><div class="clock" id="hClock"></div><div class="muted" id="hStatus"></div></div>
+      <div class="form"><button class="btn green big" id="btnIn">Check in</button><button class="btn red big" id="btnOut">Check out</button></div>
+    </div>
+    <div class="grid" id="homeStats"></div>
+    <div class="card"><h2>Recent days</h2>
+      <div class="tablewrap"><table><thead><tr><th>Date</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th></tr></thead><tbody id="recentBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===== EMPLOYEE: my attendance report ===== -->
+  <section id="myatt">
+    <div class="card"><div class="form"><h2 style="margin:0">My login times</h2><input id="myMonth" type="month" style="margin-left:auto"></div>
+      <div class="grid" id="myStats"></div>
+      <div class="tablewrap"><table><thead><tr><th>Date</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th></tr></thead><tbody id="myBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===== EMPLOYEE: my leaves ===== -->
+  <section id="myleaves">
+    <div class="card"><h2>Apply for leave</h2>
+      <div class="form">
+        <select id="lType"><option>Casual</option><option>Sick</option><option>Earned</option><option>Unpaid</option></select>
+        <input id="lFrom" type="date"><input id="lTo" type="date">
+        <input id="lReason" placeholder="Reason" size="28">
+        <button class="btn" id="applyLeave">Apply</button>
+      </div>
+    </div>
+    <div class="card"><h2>My leave requests</h2>
+      <div class="tablewrap"><table><thead><tr><th>Type</th><th>From</th><th>To</th><th>Reason</th><th>Status</th></tr></thead><tbody id="myLeaveBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ===== BOTH: profile ===== -->
+  <section id="profile">
+    <div class="grid wide">
+      <div class="card"><h2>My profile</h2><table><tbody id="profBody"></tbody></table></div>
+      <div class="card"><h2>Change password</h2>
+        <div class="form"><input id="pwOld" type="password" placeholder="Current password"></div>
+        <div class="form"><input id="pwNew" type="password" placeholder="New password (min 6)"></div>
+        <button class="btn" id="pwBtn">Update password</button>
+      </div>
+    </div>
+  </section>
+</main>
+</div>
+
+<div id="modal"><div class="card" id="modalCard"></div></div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const fmtT = (d) => d ? new Date(d).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '–';
+const fmtD = (d) => new Date(d).toLocaleDateString([], { weekday:'short', day:'numeric', month:'short' });
+const tag = (s) => `<span class="tag ${esc(s).split(' ')[0]}">${esc(s)}</span>`;
+const stat = (n, l, color) => `<div class="card stat"><div class="n" ${color ? `style="color:${color}"` : ''}>${n}</div><div class="l">${l}</div></div>`;
+const curMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+
+let token = localStorage.getItem('hrtoken');
+let me = JSON.parse(localStorage.getItem('hruser') || 'null');
+let socket = null;
+let deptChart = null, attendanceChart = null;
+const deptPalette = ['#4f46e5','#0891b2','#16a34a','#d97706','#db2777','#7c3aed','#0284c7'];
+document.documentElement.dataset.theme = localStorage.getItem('hrtheme') || 'light';
+$('themeToggle').onclick = () => {
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = theme; localStorage.setItem('hrtheme', theme);
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text');
+  const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--muted');
+  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--line');
+  [deptChart, attendanceChart].forEach((c) => { if (!c) return; c.options.plugins.legend.labels.color = textColor; if (c.options.scales) Object.values(c.options.scales).forEach((s) => { s.ticks.color = mutedColor; s.grid.color = gridColor; }); c.update(); });
+  $('themeToggle').textContent = theme === 'dark' ? '☀' : '☾';
+};
+$('themeToggle').textContent = document.documentElement.dataset.theme === 'dark' ? '☀' : '☾';
+
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._t); t._t = setTimeout(() => t.style.display = 'none', 3500); }
+
+async function api(path, opts = {}) {
+  const res = await fetch('/api' + path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && token) { logout(); throw new Error(data.message || 'Session expired'); }
+  if (!res.ok) throw new Error((data.errors && data.errors.join(', ')) || data.message || 'Request failed');
+  return data;
+}
+const run = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast('⚠ ' + e.message); } };
+
+// ================= LOGIN / LOGOUT =================
+$('lgBtn').onclick = run(async () => {
+  const r = await api('/auth/login', { method: 'POST', body: { email: $('lgEmail').value, password: $('lgPass').value } });
+  token = r.token; me = r.user;
+  localStorage.setItem('hrtoken', token); localStorage.setItem('hruser', JSON.stringify(me));
+  $('lgPass').value = ''; startApp();
+});
+$('lgPass').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('lgBtn').click(); });
+function logout() {
+  token = null; me = null; localStorage.removeItem('hrtoken'); localStorage.removeItem('hruser');
+  if (socket) { socket.disconnect(); socket = null; }
+  $('app').classList.add('hidden'); $('login').classList.remove('hidden');
+}
+$('logout').onclick = logout;
+
+// ================= APP SHELL =================
+const TABS = {
+  HR: [['dashboard', 'Dashboard', '▦'], ['employees', 'Employees', '♙'], ['attendance', 'Attendance', '◷'], ['leaves', 'Leave requests', '▤'], ['reports', 'Reports', '▥'], ['profile', 'Profile', '⚙']],
+  Employee: [['home', 'Home', '⌂'], ['myatt', 'My attendance', '◷'], ['myleaves', 'My leaves', '▤'], ['profile', 'Profile', '⚙']],
+};
+const loaders = {
+  dashboard: () => loadDashboard(), employees: () => loadEmployees(), attendance: () => loadToday(), leaves: () => loadLeaves(),
+  home: () => loadHome(), myatt: () => loadMyAtt(), myleaves: () => loadMyLeaves(), profile: () => loadProfile(),
+};
+let currentTab = null;
+
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('main section').forEach((s) => s.classList.toggle('active', s.id === tab));
+  document.querySelectorAll(`#${tab} tbody`).forEach((body) => { body.innerHTML = `<tr class="loading-row"><td colspan="12"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></td></tr>`; });
+  loaders[tab] && loaders[tab]();
+}
+$('nav').addEventListener('click', (e) => { const button = e.target.closest('button[data-tab]'); if (button) showTab(button.dataset.tab); });
+
+async function startApp() {
+  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+  $('uName').textContent = me.name; $('uRole').textContent = me.role === 'HR' ? 'HR' : 'Employee · ' + (me.empCode || '');
+  const tabs = TABS[me.role];
+  $('nav').innerHTML = tabs.map(([id, label, icon]) => `<button data-tab="${id}" title="${label}"><span class="nav-icon" aria-hidden="true">${icon}</span><span>${label}</span></button>`).join('');
+  connectSocket();
+  if (me.role === 'HR') await run(loadDepartments)();
+  showTab(tabs[0][0]);
+}
+
+// ================= HR: DASHBOARD =================
+const loadDashboard = run(async () => {
+  const [emps, today, abs, stats, pending, dailyDepts] = await Promise.all([api('/employees?limit=1&status=Active'), api('/attendance/today'), api('/attendance/report/absentees'), api('/employees/stats/departments'), api('/leaves?status=Pending'), api('/attendance/report/department')]);
+  $('sTotal').textContent = emps.total; $('sPresent').textContent = today.count;
+  const late = today.data.filter((r) => r.status === 'Late').length;
+  $('sLate').textContent = late;
+  $('sAbsent').textContent = abs.count; $('sPending').textContent = pending.length;
+  $('deptStats').innerHTML = stats.map((s) => `<tr><td>${esc(s.department)}</td><td>${s.headcount}</td><td>₹${Number(s.avgSalary).toLocaleString('en-IN')}</td></tr>`).join('');
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text');
+  const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--muted');
+  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--line');
+  if (deptChart) deptChart.destroy();
+  const dailyByDept = new Map(dailyDepts.report.map((d) => [d.department, d]));
+  deptChart = new Chart($('deptChart'), { type:'bar', data:{ labels:stats.map((s) => s.department), datasets:[{ label:'Present', data:stats.map((s) => { const d = dailyByDept.get(s.department); return d ? Math.max(d.present-d.late,0) : 0; }), backgroundColor:'#4f46e5', borderRadius:7 },{ label:'Late', data:stats.map((s) => dailyByDept.get(s.department)?.late || 0), backgroundColor:'#f59e0b', borderRadius:7 }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ stacked:true, ticks:{color:mutedColor}, grid:{display:false} }, y:{ stacked:true, beginAtZero:true, ticks:{color:mutedColor,precision:0}, grid:{color:gridColor} } }, plugins:{legend:{labels:{color:textColor}}} } });
+  if (attendanceChart) attendanceChart.destroy();
+  const present = today.data.filter((r) => r.status === 'Present').length;
+  attendanceChart = new Chart($('attendanceChart'), { type:'doughnut', data:{ labels:['Present','Late','Absent'], datasets:[{ data:[present,late,abs.count], backgroundColor:['#22c55e','#f59e0b','#ef4444'], borderWidth:0, hoverOffset:5 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{legend:{position:'bottom',labels:{color:textColor,padding:18}}} } });
+});
+
+// ================= HR: EMPLOYEES =================
+async function loadDepartments() {
+  const depts = await api('/departments');
+  const opts = depts.map((d) => `<option value="${d._id}">${esc(d.name)}</option>`).join('');
+  $('eDept').innerHTML = opts; $('fDept').innerHTML = '<option value="">All departments</option>' + opts;
+}
+const loadEmployees = run(async () => {
+  const q = new URLSearchParams({ limit: 500 });
+  if ($('search').value.trim()) q.set('search', $('search').value.trim());
+  if ($('fDept').value) q.set('department', $('fDept').value);
+  const { data } = await api('/employees?' + q);
+  $('empBody').innerHTML = data.map((e) => `<tr><td>${esc(e.empCode)}</td><td><span class="identity"><span class="avatar">${esc(e.name.split(/\s+/).map((p) => p[0]).slice(0,2).join('').toUpperCase())}</span>${esc(e.name)}</span></td><td>${esc(e.email)}</td><td><span class="dept-badge" style="--dept-color:${deptPalette[Math.abs((e.department?.name || '').split('').reduce((a,c)=>a+c.charCodeAt(0),0))%deptPalette.length]}">${esc(e.department?.name)}</span></td><td>${esc(e.designation)}</td><td>${tag(e.role)}</td><td>${tag(e.status)}</td>
+    <td style="white-space:nowrap"><button class="btn gray sm" onclick="openReport('${e._id}','${esc(e.name)}')">Report</button>
+    ${e.status !== 'Resigned' ? `<button class="btn gray sm" onclick="resetPw('${e._id}','${esc(e.name)}')">Reset pw</button> <button class="btn red sm" onclick="resign('${e._id}')">Resign</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">No employees found</td></tr>';
+});
+$('addEmp').onclick = run(async () => {
+  const body = { empCode: $('eCode').value, name: $('eName').value, email: $('eEmail').value, phone: $('ePhone').value, department: $('eDept').value, designation: $('eDesig').value, salary: +$('eSalary').value, role: $('eRole').value };
+  if ($('ePass').value) body.password = $('ePass').value;
+  await api('/employees', { method: 'POST', body });
+  toast('Employee added' + (body.password ? '' : ' (password: Welcome@123)'));
+  ['eCode','eName','eEmail','ePhone','eDesig','eSalary','ePass'].forEach((i) => $(i).value = '');
+  loadEmployees();
+});
+window.resign = run(async (id) => { if (!confirm('Mark this employee as Resigned?')) return; await api('/employees/' + id, { method: 'DELETE' }); toast('Marked as Resigned'); loadEmployees(); });
+window.resetPw = run(async (id, name) => { if (!confirm(`Reset ${name}'s password to Welcome@123?`)) return; const r = await api(`/employees/${id}/reset-password`, { method: 'PATCH' }); toast(r.message); });
+let st; $('search').oninput = () => { clearTimeout(st); st = setTimeout(loadEmployees, 300); };
+$('fDept').onchange = loadEmployees;
+
+// HR: view any employee's attendance report in a modal
+window.openReport = run(async (id, name) => {
+  $('modal').style.display = 'flex';
+  $('modalCard').innerHTML = `<div class="form"><h2 style="margin:0">${esc(name)} – attendance</h2><input id="mMonth" type="month" value="${curMonth()}" style="margin-left:auto"><button class="btn gray sm" onclick="closeModal()">Close</button></div><div class="grid" id="mStats"></div><div class="tablewrap"><table><thead><tr><th>Date</th><th>Check-in</th><th>Check-out</th><th>Hours</th><th>Status</th></tr></thead><tbody id="mBody"></tbody></table></div>`;
+  const load = run(async () => {
+    const [y, m] = $('mMonth').value.split('-');
+    const r = await api(`/attendance/employee/${id}?year=${y}&month=${+m}`);
+    $('mStats').innerHTML = summaryCards(r.summary); $('mBody').innerHTML = attRows(r.records);
+  });
+  $('mMonth').onchange = load; load();
+});
+window.closeModal = () => { $('modal').style.display = 'none'; };
+$('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+
+// ================= HR: TODAY / LEAVES / REPORTS =================
+const loadToday = run(async () => {
+  const { data } = await api('/attendance/today');
+  $('todayBody').innerHTML = data.map((r) => `<tr><td>${esc(r.employee?.empCode)}</td><td>${esc(r.employee?.name)}</td><td>${fmtT(r.checkIn)}</td><td>${fmtT(r.checkOut)}</td><td>${r.workHours || '–'}</td><td>${tag(r.status)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No check-ins yet today</td></tr>';
+});
+const loadLeaves = run(async () => {
+  const s = $('lFilter').value; const list = await api('/leaves' + (s ? '?status=' + s : ''));
+  $('leaveBody').innerHTML = list.map((l) => `<tr><td>${esc(l.employee?.name)}</td><td>${esc(l.type)}</td><td>${fmtD(l.from)}</td><td>${fmtD(l.to)}</td><td>${esc(l.reason)}</td><td>${tag(l.status)}</td>
+    <td>${l.status === 'Pending' ? `<button class="btn green sm" onclick="review('${l._id}','Approved')">Approve</button> <button class="btn red sm" onclick="review('${l._id}','Rejected')">Reject</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">No leave requests</td></tr>';
+});
+window.review = run(async (id, status) => { await api('/leaves/' + id, { method: 'PATCH', body: { status } }); toast('Leave ' + status.toLowerCase()); loadLeaves(); });
+$('lFilter').onchange = loadLeaves;
+
+const now = new Date(); $('rYear').value = now.getFullYear(); $('rMonth').value = now.getMonth() + 1;
+$('dDate').value = $('abDate').value = now.toISOString().slice(0, 10);
+$('runMonthly').onclick = run(async () => {
+  const r = await api(`/attendance/report/monthly?year=${$('rYear').value}&month=${$('rMonth').value}`);
+  $('monthlyBody').innerHTML = r.report.map((x) => `<tr><td>${esc(x.empCode)}</td><td>${esc(x.name)}</td><td>${x.present}</td><td>${x.late}</td><td>${x.halfDays}</td><td>${x.onLeave}</td><td>${x.totalHours}</td><td>${x.avgHours}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">No data for this month</td></tr>';
+});
+$('runDept').onclick = run(async () => {
+  const r = await api('/attendance/report/department?date=' + $('dDate').value);
+  $('deptBody').innerHTML = r.report.map((x) => `<tr><td>${esc(x.department)}</td><td>${x.present}</td><td>${x.late}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">No data</td></tr>';
+});
+$('runAbs').onclick = run(async () => {
+  const r = await api('/attendance/report/absentees?date=' + $('abDate').value);
+  $('absBody').innerHTML = r.absent.map((x) => `<tr><td>${esc(x.empCode)}</td><td>${esc(x.name)}</td><td>${esc(x.designation)}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Everyone is present 🎉</td></tr>';
+});
+$('runLate').onclick = run(async () => {
+  const r = await api('/attendance/report/top-late?limit=5');
+  $('lateBody').innerHTML = r.map((x) => `<tr><td>${esc(x.empCode)}</td><td>${esc(x.name)}</td><td>${x.lateCount}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">No data</td></tr>';
+});
+
+// ================= SHARED: attendance table helpers =================
+function summaryCards(s) {
+  return stat(s.present, 'Days present', 'var(--green)') + stat(s.late, 'Late arrivals', 'var(--amber)') + stat(s.absent, 'Absent (est.)', 'var(--red)') +
+         stat(s.onLeave, 'On leave', '#2563eb') + stat(s.totalHours, 'Total hours') + stat(s.avgHours, 'Avg hours / day');
+}
+function attRows(records) {
+  return records.map((r) => `<tr><td>${fmtD(r.date)}</td><td>${fmtT(r.checkIn)}</td><td>${fmtT(r.checkOut)}</td><td>${r.workHours || '–'}</td><td>${tag(r.status)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No records for this month</td></tr>';
+}
+
+// ================= EMPLOYEE: HOME =================
+setInterval(() => { if ($('hClock')) { const d = new Date(); $('hClock').textContent = d.toLocaleTimeString(); $('hDate').textContent = d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); } }, 1000);
+
+const loadHome = run(async () => {
+  const [rec, rep] = await Promise.all([api('/attendance/me/today'), api('/attendance/me')]);
+  $('btnIn').disabled = !!rec; $('btnOut').disabled = !rec || !!rec.checkOut;
+  $('hStatus').textContent = !rec ? 'You have not checked in yet today'
+    : !rec.checkOut ? `Checked in at ${fmtT(rec.checkIn)} (${rec.status})`
+    : `Done for today – ${rec.workHours} hrs (${fmtT(rec.checkIn)} to ${fmtT(rec.checkOut)})`;
+  $('homeStats').innerHTML = summaryCards(rep.summary).split('<div class="card stat">').slice(1, 5).map((x) => '<div class="card stat">' + x).join('');
+  $('recentBody').innerHTML = attRows(rep.records.slice(0, 5));
+});
+$('btnIn').onclick = run(async () => { await api('/attendance/check-in', { method: 'POST' }); toast('Checked in. Have a great day!'); loadHome(); });
+$('btnOut').onclick = run(async () => { const r = await api('/attendance/check-out', { method: 'POST' }); toast('Checked out – ' + r.workHours + ' hrs worked'); loadHome(); });
+
+// ================= EMPLOYEE: MY ATTENDANCE =================
+$('myMonth').value = curMonth();
+const loadMyAtt = run(async () => {
+  const [y, m] = $('myMonth').value.split('-');
+  const r = await api(`/attendance/me?year=${y}&month=${+m}`);
+  $('myStats').innerHTML = summaryCards(r.summary); $('myBody').innerHTML = attRows(r.records);
+});
+$('myMonth').onchange = loadMyAtt;
+
+// ================= EMPLOYEE: MY LEAVES =================
+const loadMyLeaves = run(async () => {
+  const list = await api('/leaves/me');
+  $('myLeaveBody').innerHTML = list.map((l) => `<tr><td>${esc(l.type)}</td><td>${fmtD(l.from)}</td><td>${fmtD(l.to)}</td><td>${esc(l.reason)}</td><td>${tag(l.status)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">You have not applied for any leave</td></tr>';
+});
+$('applyLeave').onclick = run(async () => {
+  await api('/leaves', { method: 'POST', body: { type: $('lType').value, from: $('lFrom').value, to: $('lTo').value, reason: $('lReason').value } });
+  toast('Leave request sent to HR'); $('lReason').value = ''; loadMyLeaves();
+});
+
+// ================= PROFILE =================
+const loadProfile = run(async () => {
+  const p = await api('/auth/me');
+  const row = (k, v) => `<tr><td class="muted">${k}</td><td>${esc(v)}</td></tr>`;
+  $('profBody').innerHTML = row('Name', p.name) + row('Employee code', p.empCode) + row('Email', p.email) + row('Role', p.role) + row('Department', p.department?.name) + row('Designation', p.designation) + row('Joined', new Date(p.joiningDate).toLocaleDateString());
+});
+$('pwBtn').onclick = run(async () => {
+  const r = await api('/auth/change-password', { method: 'POST', body: { currentPassword: $('pwOld').value, newPassword: $('pwNew').value } });
+  toast(r.message); $('pwOld').value = $('pwNew').value = '';
+});
+
+// ================= REAL-TIME =================
+function feed(text) {
+  const ul = $('feed'); if (!ul) return; if (ul.firstChild?.classList?.contains('muted')) ul.innerHTML = '';
+  const li = document.createElement('li'); li.textContent = new Date().toLocaleTimeString() + '  ' + text; ul.prepend(li);
+}
+function connectSocket() {
+  socket = io({ auth: { token } });
+  socket.on('connect', () => { $('dot').classList.add('on'); $('livetxt').textContent = 'Live'; });
+  socket.on('disconnect', () => { $('dot').classList.remove('on'); $('livetxt').textContent = 'Offline'; });
+  if (me.role === 'HR') {
+    socket.on('attendance:update', (d) => {
+      feed(d.type === 'check-in' ? `✅ ${d.employee} checked in (${d.status})` : `🚪 ${d.employee} checked out (${d.workHours} hrs)`);
+      if (currentTab === 'dashboard') loadDashboard(); if (currentTab === 'attendance') loadToday();
+    });
+    socket.on('leave:new', (d) => { feed(`📝 ${d.employee} requested ${d.type} leave`); toast('New leave request'); if (currentTab === 'dashboard') loadDashboard(); if (currentTab === 'leaves') loadLeaves(); });
+    socket.on('leave:update', () => { if (currentTab === 'leaves') loadLeaves(); });
+  } else {
+    socket.on('me:update', () => { if (currentTab === 'home') loadHome(); });
+    socket.on('leave:update', (d) => { toast(`Your leave request was ${d.status.toLowerCase()}`); if (currentTab === 'myleaves') loadMyLeaves(); });
+  }
+}
+
+// ================= BOOT =================
+if (token && me) startApp(); else $('login').classList.remove('hidden');
+</script>
+</body>
+</html>
